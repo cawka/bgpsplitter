@@ -3,7 +3,7 @@
 
 AC_PREREQ([2.67])
 AC_INIT([bgpsplitter], [0.1], [alexander.afanasyev@ucla.edu])
-AC_CONFIG_SRCDIR([src/bgpparser.cpp])
+AC_CONFIG_SRCDIR([src/main.cpp])
 
 AM_INIT_AUTOMAKE
 
@@ -22,6 +22,9 @@ AC_SUBST(bgpparser_LIBS)
 AX_BOOST_BASE( [1.30],, [AC_MSG_ERROR([Boost C++ Libraries are not installed, but are required by libbgpparser])] )
 AX_BOOST_SYSTEM
 AX_BOOST_FILESYSTEM
+AX_BOOST_PROGRAM_OPTIONS
+AX_BOOST_REGEX
+AX_BOOST_IOSTREAMS
 
 # Checks for header files.
 
