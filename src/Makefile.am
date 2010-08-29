@@ -3,8 +3,8 @@ AM_CPPFLAGS = $(log4cxx_CFLAGS) $(bgpparser_CFLAGS) $(BOOST_CPPFLAGS)
 bin_PROGRAMS = bgpsplitter
 
 bgpsplitter_SOURCES = main.cpp
-bgpsplitter_LDFLAGS = -lz -lbz2 \
-	$(bgpparser_LIB) \
+bgpsplitter_LDFLAGS = \
+	$(bgpparser_LIBS) \
 	$(log4cxx_LIBS) \
 	$(BOOST_LDFLAGS) \
 		$(BOOST_SYSTEM_LIB) \
