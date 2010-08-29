@@ -1,9 +1,10 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ([2.67])
+AC_PREREQ([2.62])
 AC_INIT([bgpsplitter], [0.1], [alexander.afanasyev@ucla.edu])
 AC_CONFIG_SRCDIR([src/main.cpp])
+AC_CONFIG_HEADERS([src/config.h])
 
 AM_INIT_AUTOMAKE
 
