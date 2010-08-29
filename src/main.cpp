@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008,2009, University of California, Los Angeles All rights reserved.
+ * Copyright (c) 2010 University of California, Los Angeles All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -26,10 +26,25 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <iostream>
-#include <string>
+#include <bgpparser.h>
+#include <MRTCommonHeader.h>
+#include <MRTBgp4MPStateChange.h>
+#include <MRTBgp4MPMessage.h>
+#include <MRTBgp4MPEntry.h>
+#include <MRTBgp4MPSnapshot.h>
+#include <MRTTblDump.h>
+#include <MRTTblDumpV2PeerIndexTbl.h>
+#include <MRTTblDumpV2RibIPv4Unicast.h>
+#include <MRTTblDumpV2RibIPv4Multicast.h>
+#include <MRTTblDumpV2RibIPv6Unicast.h>
+#include <MRTTblDumpV2RibIPv6Multicast.h>
 
-using namespace std;
+#include <BGPCommonHeader.h>
+#include <BGPUpdate.h>
+
+#include <AttributeType.h>
+#include <AttributeTypeOrigin.h>
+#include <Exceptions.h>
 
 #include <log4cxx/logger.h>
 #include <log4cxx/consoleappender.h>
@@ -63,6 +78,8 @@ namespace io = boost::iostreams;
 
 #include <MRTStructure.h>
 #include <MRTCommonHeader.h>
+
+using namespace std;
 
 static LoggerPtr _log=Logger::getLogger( "simple" );
 
@@ -103,7 +120,7 @@ int main( int argc, char** argv )
 	// configure Logger
 	if( CONFIG.count("log")>0 )
 		PropertyConfigurator::configureAndWatch( CONFIG["log"].as<string>() );
-	if( fs::exists("log4cxx.properties") )
+    else if( fs::exists("log4cxx.properties") )
 		PropertyConfigurator::configureAndWatch( "log4cxx.properties" );
 	else
 	{
@@ -159,35 +176,25 @@ int main( int argc, char** argv )
 	else
 		in.push( input_file );
 
-	try
-	{
-		while( !in.eof() )
-		{
-//			MRTCommonHeaderPacket hdr;
-//			int len=io::read( in, reinterpret_cast<char*>(&hdr), sizeof(MRTCommonHeaderPacket) );
-//			if( len<0 ) break; //end of file
-//			if( len!=sizeof(MRTCommonHeaderPacket) ) throw string( "MRT file format error" );
-//
-//			boost::scoped_array<char> raw_mrt( new char[ntohl(hdr.length) + sizeof(MRTCommonHeaderPacket)] );
-//			memcpy( raw_mrt.get(), reinterpret_cast<char*>(&hdr), sizeof(MRTCommonHeaderPacket) );
-//
-//			len=io::read( in, raw_mrt.get()+sizeof(MRTCommonHeaderPacket), ntohl(hdr.length) );
-//			if( len!=ntohl(hdr.length) ) throw string( "MRT file format error" );
-//
-//			uint8_t *tmp=reinterpret_cast<uint8_t*>( raw_mrt.get() );
-			MRTMessagePtr msg=MRTCommonHeader::newMessage( in );
-		}
+    try
+    {
+    	while( in.peek()!=-1 )
+    	{
+           	try
+        	{
+                MRTMessagePtr msg=MRTCommonHeader::newMessage( in );
+            }
+            catch( BGPParserError e )
+            {
+                LOG4CXX_ERROR( _log, e.what() );
+            }
+    	}
 	}
 //	catch( io::gzip_error e )
 //	catch( io::bzip2_error e )
 	catch( std::istream::failure e )
 	{
 		cerr << "ERROR: " << e.what() << endl;
-		exit( 10 );
-	}
-	catch( const string &e )
-	{
-		cerr << "ERROR: " << e << endl;
 		exit( 10 );
 	}
 	catch( ... )
@@ -199,3 +206,5 @@ int main( int argc, char** argv )
 	_log->info( "Parsing ended" );
 	return 0;
 }
+
+// vim: sw=4 ts=4 sts=4 expandtab
