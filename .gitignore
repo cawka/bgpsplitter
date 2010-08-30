@@ -31,4 +31,6 @@ src/1
 src/bgpsplitter
 src/updates.20090501.0000.gz
 ChangeLog
+config.h
+stamp-h1
 
