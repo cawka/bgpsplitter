@@ -27,6 +27,8 @@ AX_BOOST_PROGRAM_OPTIONS
 AX_BOOST_REGEX
 AX_BOOST_IOSTREAMS
 
+AC_PATH_PROGS(PERL, perl)
+
 # Checks for header files.
 
 # Checks for typedefs, structures, and compiler characteristics.
@@ -41,5 +43,7 @@ AC_FUNC_MALLOC
 AC_CHECK_FUNCS([memset])
 
 AC_CONFIG_FILES([Makefile
-                 src/Makefile])
+                 src/Makefile
+				 scripts/Makefile
+				 ])
 AC_OUTPUT
