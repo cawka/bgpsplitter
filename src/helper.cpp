@@ -28,7 +28,7 @@ using namespace log4cxx::helpers;
 using namespace std;
 using namespace boost;
 
-static LoggerPtr _Logger=Logger::getLogger( "simple.helper" );
+static LoggerPtr _Logger=Logger::getLogger( "bgpsplitter" );
 
 
 static void setStream( io::filtering_stream<io::input> &stream, const string &format )
@@ -112,9 +112,9 @@ void setLogging( const boost::program_options::variables_map &config )
 {
 	// configure Logger
 	if( config.count("log")>0 )
-		PropertyConfigurator::configureAndWatch( config["log"].as<string>() );
+		PropertyConfigurator::configure( config["log"].as<string>() );
     else if( fs::exists("log4cxx.properties") )
-		PropertyConfigurator::configureAndWatch( "log4cxx.properties" );
+		PropertyConfigurator::configure( "log4cxx.properties" );
 	else
 	{
 		PatternLayoutPtr   layout   ( new PatternLayout("%d{HH:mm:ss} %p %c{1} - %m%n") );

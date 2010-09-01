@@ -52,6 +52,7 @@ using namespace log4cxx;
 namespace po = boost::program_options;
 
 #include <boost/iostreams/filtering_stream.hpp>
+#include <boost/iostreams/flush.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/filter/bzip2.hpp>
 namespace io = boost::iostreams;
@@ -66,12 +67,14 @@ using namespace boost;
 
 #include "helper.h"
 
-static LoggerPtr _log=Logger::getLogger( "simple" );
+static LoggerPtr _log=Logger::getLogger( "bgpsplitter" );
 static volatile bool NeedStop=false;
+static volatile int RetCode=0;
 
 void forceStop( int sig )
 {
 	NeedStop=true;
+    RetCode=999;
 }
 
 int main( int argc, char** argv )
@@ -88,6 +91,8 @@ int main( int argc, char** argv )
 				     "Output MRT file for IPv6 data only (should be in the same format as input)")
 		( "force-output",
 					 "Force overwriting existing output file")
+        ( "skip-if-exists",
+                     "Silently skip existing output file")
 //		( "out4,O",  po::value<string>(),
 //				     "Output MRT file for IPv4 data only (should be in the same format as input)")
 //		( "format", po::value<string>(),
@@ -166,8 +171,16 @@ int main( int argc, char** argv )
 
 	if( fs::exists(ofilename) && CONFIG.count("force-output")==0 )
 	{
-		cerr << "ERROR: Output file exists, use --force-output to force overwriting" << endl;
-		exit( 11 );
+        if( CONFIG.count("skip-if-exists")>0 )
+        {
+            LOG4CXX_INFO( _log, "Skipping existent file " << ofilename ); 
+            exit( 0 );
+        }
+        else
+        {
+	    	cerr << "ERROR: Output file exists, use --force-output to force overwriting" << endl;
+    		exit( 11 );
+        }
 	}
 
 	ofstream ofile( ofilename.c_str(), ios_base::out | ios_base::trunc | ios_base::binary );
@@ -189,6 +202,8 @@ int main( int argc, char** argv )
 	unsigned long long count_output=0;
     try
     {
+        io::flush( out );
+
     	while( !NeedStop && in.peek()!=-1 )
     	{
     		count++;
@@ -256,14 +271,14 @@ int main( int argc, char** argv )
 
                 			if( bgp_update->getNlriLength()>0 )
                 			{
-                				LOG4CXX_INFO(_log,
+                				LOG4CXX_ERROR(_log,
                 						"BGP_UPDATE carries IPv6 MP_REACH_NLRI and contains non-zero NLRI section"
                 						);
                 			}
 
                 			if( bgp_update->getWithdrawnRoutesLength()>0 )
                 			{
-                				LOG4CXX_INFO(_log,
+                				LOG4CXX_ERROR(_log,
                 						"BGP_UPDATE carries IPv6 MP_UNREACH_NLRI and contains non-zero Withdrawn section"
                 						);
                 			}
@@ -339,30 +354,41 @@ int main( int argc, char** argv )
                 count_error++;
             }
     	}
+
+    	io::close( out );
+    	io::close( in );
+        io::flush( out );
+    	ofile.close( );
+    	ifile.close( );
 	}
     catch( BGPParserError e )
     {
-		cerr << "ERROR: " << e.what() << endl;
+		cerr << "ERROR (bgpparser): " << e.what() << endl;
+        LOG4CXX_ERROR( _log, "ERROR (bgpparser): " << e.what() );
 		NeedStop=true;
     }
 	catch( io::gzip_error e )
 	{
-		cerr << "ERROR: " << e.what() << endl;
+		cerr << "ERROR (gzip): " << e.what() << endl;
+        LOG4CXX_ERROR( _log, "ERROR (gzip): " << e.what() );
 		NeedStop=true;
 	}
 	catch( io::bzip2_error e )
 	{
-		cerr << "ERROR: " << e.what() << endl;
+		cerr << "ERROR (bzip): " << e.what() << endl;
+        LOG4CXX_ERROR( _log, "ERROR (bzip): code: " << e.error() << ", message: " << e.what() );
 		NeedStop=true;
 	}
 	catch( ios_base::failure e )
 	{
-		cerr << "ERROR: " << e.what() << endl;
+		cerr << "ERROR (ios_base): " << e.what() << endl;
+        LOG4CXX_ERROR( _log, "ERROR (ios_base): " << e.what() );
 		NeedStop=true;
 	}
 	catch( ... )
 	{
 		cerr << "Unknown exception" << endl;
+        LOG4CXX_ERROR( _log, "ERROR: Unknown exception" );
 		NeedStop=true;
 	}
 
@@ -377,13 +403,9 @@ int main( int argc, char** argv )
 		ofile.close( );
 		std::remove( ofilename.c_str() );
 	}
-	io::close( in );
-	io::close( out );
-	ofile.close( );
-	ifile.close( );
 
 	LOG4CXX_INFO( _log, "Parsing ended" );
-	return 0;
+	return RetCode;
 }
 
 // vim: sw=4 ts=4 sts=4 expandtab
