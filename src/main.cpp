@@ -404,7 +404,7 @@ int main( int argc, char** argv )
 		std::remove( ofilename.c_str() );
 	}
 
-	LOG4CXX_INFO( _log, "Parsing ended" );
+	LOG4CXX_INFO( _log, "Parsing ended [" << ifilename << "]" );
 	return RetCode;
 }
 
