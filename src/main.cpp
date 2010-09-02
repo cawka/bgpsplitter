@@ -348,9 +348,19 @@ int main( int argc, char** argv )
                 io::write( out, msg->getData().get(), msg->getLength() );
                 count_output++;
             }
-            catch( BGPParserError e )
+            catch( MRTException e )
             {
                 LOG4CXX_ERROR( _log, e.what() );
+                count_error++;
+            }
+            catch( BGPTextError e )
+            {
+                LOG4CXX_ERROR( _log, e.what() );
+                count_error++;
+            }
+            catch( BGPError e )
+            {
+                //information should be already logged, if the logger for bgpparser is enabled
                 count_error++;
             }
     	}
@@ -390,10 +400,14 @@ int main( int argc, char** argv )
 		cerr << "Unknown exception" << endl;
         LOG4CXX_ERROR( _log, "ERROR: Unknown exception" );
 		NeedStop=true;
+        throw;
 	}
 
 	LOG4CXX_INFO( _log, count << " MRT records are parsed" );
-	LOG4CXX_INFO( _log, count_error << " MRT records skipped due to parsing error" );
+    if( count_error>0 )
+    {
+	    LOG4CXX_INFO( _log, count_error << " MRT records skipped due to parsing error" );
+    }
 	LOG4CXX_INFO( _log, count_output << " IPv6 related MRT records are written into the output file" );
 
 	if( NeedStop )
