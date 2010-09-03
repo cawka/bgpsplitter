@@ -368,12 +368,6 @@ int main( int argc, char** argv )
                 count_error++;
             }
     	}
-
-    	io::close( out );
-    	io::close( in );
-        io::flush( out );
-    	ofile.close( );
-    	ifile.close( );
 	}
     catch( BGPParserError e )
     {
@@ -407,6 +401,12 @@ int main( int argc, char** argv )
         throw;
 	}
 
+    io::close( out );
+    io::close( in );
+    io::flush( out );
+    ofile.close( );
+    ifile.close( );
+
 	LOG4CXX_INFO( _log, count << " MRTs parsed" );
     if( count_error>0 )
     {
@@ -418,7 +418,6 @@ int main( int argc, char** argv )
 	{
 		LOG4CXX_INFO( _log, "Parsing was terminated, removing partially processed files" );
 		// @TODO remove any output file that was produced
-		ofile.close( );
 		std::remove( ofilename.c_str() );
 	}
 
