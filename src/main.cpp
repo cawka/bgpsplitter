@@ -142,7 +142,23 @@ int main( int argc, char** argv )
 
 	/////////////////////////////////////////////////////////////////////////////
 	string ifilename=CONFIG["input"].as<string>( );
-	io::filtering_istream in;
+	string ofilename=CONFIG["output"].as<string>( );
+	if( fs::exists(ofilename) && CONFIG.count("force-output")==0 )
+	{
+        if( CONFIG.count("skip-if-exists")>0 )
+        {
+            LOG4CXX_INFO( _log, "Skipping existent file " << ofilename ); 
+            exit( 0 );
+        }
+        else
+        {
+	    	cerr << "ERROR: Output file exists, use --force-output to force overwriting" << endl;
+    		exit( 11 );
+        }
+	}
+
+    //////////////////////////////////////////////////////////////////////////
+    io::filtering_istream in;
 
 	string iformat=
 			setStream( in, ifilename.c_str()/*, default_format.c_str()*/ );
@@ -156,7 +172,6 @@ int main( int argc, char** argv )
 	in.push( ifile );
 
 	/////////////////////////////////////////////////////////////////////////////
-	string ofilename=CONFIG["output"].as<string>( );
 	io::filtering_ostream out;
 
 	string oformat=
@@ -167,20 +182,6 @@ int main( int argc, char** argv )
 		LOG4CXX_WARN( _log, "Input ["<< iformat
 				<<"] and output ["<< oformat
 				<<"] formats are not the same" );
-	}
-
-	if( fs::exists(ofilename) && CONFIG.count("force-output")==0 )
-	{
-        if( CONFIG.count("skip-if-exists")>0 )
-        {
-            LOG4CXX_INFO( _log, "Skipping existent file " << ofilename ); 
-            exit( 0 );
-        }
-        else
-        {
-	    	cerr << "ERROR: Output file exists, use --force-output to force overwriting" << endl;
-    		exit( 11 );
-        }
 	}
 
 	ofstream ofile( ofilename.c_str(), ios_base::out | ios_base::trunc | ios_base::binary );
@@ -213,6 +214,9 @@ int main( int argc, char** argv )
 
                 switch( msg->getType() )
                 {
+                case MRT_INVALID:
+                    //will copy invalid MRT as is
+                    break;
                 case BGP4MP:
                 	switch( msg->getSubType() )
                 	{
@@ -403,12 +407,12 @@ int main( int argc, char** argv )
         throw;
 	}
 
-	LOG4CXX_INFO( _log, count << " MRT records are parsed" );
+	LOG4CXX_INFO( _log, count << " MRTs parsed" );
     if( count_error>0 )
     {
-	    LOG4CXX_INFO( _log, count_error << " MRT records skipped due to parsing error" );
+	    LOG4CXX_INFO( _log, count_error << " MRTs skipped due to parsing error" );
     }
-	LOG4CXX_INFO( _log, count_output << " IPv6 related MRT records are written into the output file" );
+	LOG4CXX_INFO( _log, count_output << " potentilly IPv6 related MRTs filtered" );
 
 	if( NeedStop )
 	{
@@ -418,7 +422,7 @@ int main( int argc, char** argv )
 		std::remove( ofilename.c_str() );
 	}
 
-	LOG4CXX_INFO( _log, "Parsing ended [" << ifilename << "]" );
+	LOG4CXX_INFO( _log, "Parsing ended" );
 	return RetCode;
 }
 
