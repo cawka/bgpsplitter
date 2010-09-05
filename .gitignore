@@ -18,15 +18,12 @@ config.log
 config.status
 libtool
 INSTALL
-
 .DS_Store
 .autotools
 .cproject
 .project
 .settings/
 AUTHORS
-NEWS
-README
 src/1
 src/bgpsplitter
 src/updates.20090501.0000.gz

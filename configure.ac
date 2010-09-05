@@ -20,7 +20,7 @@ PKG_CHECK_MODULES( bgpparser, [bgpparser] )
 AC_SUBST(bgpparser_CFLAGS)
 AC_SUBST(bgpparser_LIBS)
 
-AX_BOOST_BASE( [1.30],, [AC_MSG_ERROR([Boost C++ Libraries are not installed, but are required by libbgpparser])] )
+AX_BOOST_BASE( [1.44],, [AC_MSG_ERROR([Boost C++ Libraries are not installed, but are required by libbgpparser])] )
 AX_BOOST_SYSTEM
 AX_BOOST_FILESYSTEM
 AX_BOOST_PROGRAM_OPTIONS
