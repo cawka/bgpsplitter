@@ -2,6 +2,8 @@
 #ifndef _HELPER_H_
 #define _HELPER_H_
 
+#include <MRTCommonHeader.h>
+
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/program_options/variables_map.hpp>
 
@@ -27,5 +29,15 @@ std::string setStream(  boost::iostreams::filtering_stream<T> &stream,
  * @param[in]	config		Parsed configuration
  */
 void setLogging( const boost::program_options::variables_map &config );
+
+const int MRT_ANY=0;
+const int MRT_IPv4=1;
+const int MRT_IPv6=2;
+const int MRT_UNKNOWN=99;
+
+/**
+ * Determines type of MRT message
+ */
+int determineMRTType( const MRTMessagePtr &msg );
 
 #endif

@@ -1,5 +1,15 @@
 
+#include <bgpparser.h>
+
 #include "helper.h"
+
+#include <MRTBgp4MPMessage.h>
+#include <BGPCommonHeader.h>
+#include <BGPUpdate.h>
+#include <BGPAttribute.h>
+#include <AttributeType.h>
+#include <AttributeTypeMPReachNLRI.h>
+#include <AttributeTypeMPUnreachNLRI.h>
 
 #include <boost/regex.hpp>
 
@@ -24,6 +34,8 @@ namespace fs = boost::filesystem;
 #include <log4cxx/helpers/exception.h>
 using namespace log4cxx;
 using namespace log4cxx::helpers;
+
+#include <boost/foreach.hpp>
 
 using namespace std;
 using namespace boost;
@@ -59,6 +71,18 @@ static void setStream( io::filtering_stream<io::output> &stream, const string &f
 	}
 }
 
+static void pushSTDIO( io::filtering_stream<io::input> &stream )
+{
+	stream.push( cin );
+}
+
+static void pushSTDIO( io::filtering_stream<io::output> &stream )
+{
+	stream.push( cout );
+}
+
+
+
 /**
  * Sets up a stream
  *
@@ -89,6 +113,8 @@ string setStream( io::filtering_stream<T> &stream,
 	}
 
 	setStream( stream, format );
+
+	if( string(filename)=="-" ) pushSTDIO( stream );
 
 	return format;
 }
@@ -123,4 +149,182 @@ void setLogging( const boost::program_options::variables_map &config )
 		BasicConfigurator::configure( appender );
 		Logger::getRootLogger()->setLevel( log4cxx::Level::getError() );
 	}
+}
+
+/**
+ * Determines type of MRT message
+ */
+int determineMRTType( const MRTMessagePtr &msg )
+{
+    switch( msg->getType() )
+    {
+    case BGP4MP:
+    	switch( msg->getSubType() )
+    	{
+    	case BGP4MP_STATE_CHANGE:
+
+    		///////////////////////////////////////////////////////////
+    		return MRT_ANY;
+    		///////////////////////////////////////////////////////////
+    		break;
+
+    	case BGP4MP_MESSAGE:
+    	case BGP4MP_MESSAGE_AS4:
+    	{
+    		BGPMessagePtr bgp_message=
+    				dynamic_pointer_cast<MRTBgp4MPMessage>( msg )
+    				->getPayload( );
+
+    		switch( bgp_message->getType() )
+    		{
+    		case BGPCommonHeader::OPEN:
+
+        		///////////////////////////////////////////////////////////
+    			return MRT_ANY;
+        		///////////////////////////////////////////////////////////
+    			break;
+
+    		case BGPCommonHeader::UPDATE:
+    		{
+    			BGPUpdatePtr bgp_update=
+    					dynamic_pointer_cast<BGPUpdate>( bgp_message );
+
+    			const list<BGPAttributePtr> &attrs=bgp_update->getPathAttributes();
+
+    			bool isIPv6=false;
+
+    			BOOST_FOREACH( BGPAttributePtr attr, attrs )
+    			{
+    				if( attr->getAttributeTypeCode()==AttributeType::MP_REACH_NLRI )
+    				{
+    					isIPv6 |=
+    						(AFI_IPv6 ==
+							dynamic_pointer_cast<AttributeTypeMPReachNLRI>( attr->getAttributeValue() )
+									->getAFI( ));
+    				}
+    				else if( attr->getAttributeTypeCode()==AttributeType::MP_UNREACH_NLRI )
+    				{
+    					isIPv6 |=
+    						(AFI_IPv6 ==
+							dynamic_pointer_cast<AttributeTypeMPUnreachNLRI>( attr->getAttributeValue() )
+									->getAFI( ));
+    				}
+    			}
+
+    			if( !isIPv6 )
+    			{
+
+            		///////////////////////////////////////////////////////////
+    				return MRT_IPv4;
+            		///////////////////////////////////////////////////////////
+
+    			}
+
+    			//OK, will write these
+
+    			if( bgp_update->getNlriLength()>0 )
+    			{
+    				LOG4CXX_ERROR(_Logger,
+    						"BGP_UPDATE carries IPv6 MP_REACH_NLRI and contains non-zero NLRI section"
+    						);
+    	    		///////////////////////////////////////////////////////////
+    				return MRT_ANY;
+    	    		///////////////////////////////////////////////////////////
+    			}
+
+    			if( bgp_update->getWithdrawnRoutesLength()>0 )
+    			{
+    				LOG4CXX_ERROR(_Logger,
+    						"BGP_UPDATE carries IPv6 MP_UNREACH_NLRI and contains non-zero Withdrawn section"
+    						);
+    	    		///////////////////////////////////////////////////////////
+    				return MRT_ANY;
+    	    		///////////////////////////////////////////////////////////
+    			}
+
+        		///////////////////////////////////////////////////////////
+    			return MRT_IPv6;
+        		///////////////////////////////////////////////////////////
+    			break;
+    		}
+    		case BGPCommonHeader::NOTIFICATION:
+    		case BGPCommonHeader::KEEPALIVE:
+    		case BGPCommonHeader::ROUTE_REFRESH:
+
+        		///////////////////////////////////////////////////////////
+    			return MRT_ANY;
+        		///////////////////////////////////////////////////////////
+    			break;
+    		}
+
+    		break;
+    	}
+    	case BGP4MP_STATE_CHANGE_AS4:
+
+    		///////////////////////////////////////////////////////////
+    		return MRT_ANY;
+    		///////////////////////////////////////////////////////////
+    		break;
+    	}
+    	break;
+    case TABLE_DUMP:
+    	switch( msg->getSubType() )
+    	{
+    	case AFI_IPv4:
+
+    		///////////////////////////////////////////////////////////
+    		return MRT_IPv4;
+    		///////////////////////////////////////////////////////////
+
+    		break;
+    	case AFI_IPv6:
+
+    		///////////////////////////////////////////////////////////
+    		return MRT_IPv6;
+    		///////////////////////////////////////////////////////////
+    		break;
+    	}
+    	break;
+    case TABLE_DUMP_V2:
+    	switch( msg->getSubType() )
+    	{
+    	case PEER_INDEX_TABLE:
+
+    		///////////////////////////////////////////////////////////
+    		return MRT_ANY;
+    		///////////////////////////////////////////////////////////
+    		break;
+
+    	case RIB_IPV4_UNICAST:
+    	case RIB_IPV4_MULTICAST:
+
+    		///////////////////////////////////////////////////////////
+    		return MRT_IPv4;
+    		///////////////////////////////////////////////////////////
+
+    		break;
+    	case RIB_IPV6_UNICAST:
+    	case RIB_IPV6_MULTICAST:
+
+    		///////////////////////////////////////////////////////////
+    		return MRT_IPv6;
+    		///////////////////////////////////////////////////////////
+    		break;
+
+    	case RIB_GENERIC:
+
+    		///////////////////////////////////////////////////////////
+    		return MRT_ANY;
+    		///////////////////////////////////////////////////////////
+    		break;
+    	}
+    	break;
+
+	case MRT_INVALID:
+    default:
+		///////////////////////////////////////////////////////////
+    	return MRT_UNKNOWN;
+		///////////////////////////////////////////////////////////
+    	break;
+    }
 }

@@ -29,13 +29,6 @@
 #include <bgpparser.h>
 
 #include <MRTCommonHeader.h>
-#include <MRTBgp4MPMessage.h>
-#include <BGPCommonHeader.h>
-#include <BGPUpdate.h>
-#include <BGPAttribute.h>
-#include <AttributeType.h>
-#include <AttributeTypeMPReachNLRI.h>
-#include <AttributeTypeMPUnreachNLRI.h>
 #include <Exceptions.h>
 
 #include <iostream>
@@ -59,8 +52,6 @@ namespace io = boost::iostreams;
 
 #include <boost/filesystem.hpp>
 namespace fs = boost::filesystem;
-
-#include <boost/foreach.hpp>
 
 using namespace std;
 using namespace boost;
@@ -87,23 +78,25 @@ int main( int argc, char** argv )
 		( "log,l",   po::value<string>(), "log4cxx configuration file" )
 		( "input,i", po::value<string>(),
 				     "Input MRT file" )
-		( "output,o",  po::value<string>(),
+		( "output,o",  po::value<string>()	->default_value("-"),
 				     "Output MRT file for IPv6 data only (should be in the same format as input)")
 		( "force-output",
 					 "Force overwriting existing output file")
         ( "skip-if-exists",
                      "Silently skip existing output file")
-//		( "out4,O",  po::value<string>(),
-//				     "Output MRT file for IPv4 data only (should be in the same format as input)")
-//		( "format", po::value<string>(),
-//				  "Compression format: txt, z, gz, or bz2 (will be overridden by the actual extension of the file)" )
+        ( "ipv6",    "Output IPv6-related MRT records (default)")
+        ( "ipv4",    "Output IPv4-related MRT records")
 	;
+
+	po::positional_options_description p;
+	p.add( "input", 1 );
+	p.add( "output", 1 );
 
 	try
 	{
 		po::store( po::command_line_parser(argc, argv).
-						options(opts).run(),
-//						positional(p).run(),
+						options(opts).
+						positional(p).run(),
 				   CONFIG );
 	}
 	catch( const po::error &error )
@@ -140,10 +133,24 @@ int main( int argc, char** argv )
 		exit( 1 );
 	}
 
+	bool ipv6=true;
+	bool ipv4=false;
+
+	if( CONFIG.count("ipv4")>0 )
+	{
+		ipv4=true; ipv6=false;
+	}
+	if( CONFIG.count("ipv6")>0 ) //if ipv6 is explicitly specified
+	{
+		ipv6=true;
+	}
+
 	/////////////////////////////////////////////////////////////////////////////
 	string ifilename=CONFIG["input"].as<string>( );
 	string ofilename=CONFIG["output"].as<string>( );
-	if( fs::exists(ofilename) && CONFIG.count("force-output")==0 )
+	if( ofilename!="-" && ofilename!="/dev/null"
+			&& fs::exists(ofilename)
+			&& CONFIG.count("force-output")==0 )
 	{
         if( CONFIG.count("skip-if-exists")>0 )
         {
@@ -164,12 +171,15 @@ int main( int argc, char** argv )
 			setStream( in, ifilename.c_str()/*, default_format.c_str()*/ );
 
 	ifstream ifile( ifilename.c_str(), ios_base::in | ios_base::binary );
-	if( !ifile.is_open() )
+	if( ifilename!="-" )
 	{
-		cerr << "ERROR: Cannot open file [" << ifilename << "] for reading" << endl;
-		exit( 10 );
+		if( !ifile.is_open() )
+		{
+			cerr << "ERROR: Cannot open file [" << ifilename << "] for reading" << endl;
+			exit( 10 );
+		}
+		in.push( ifile );
 	}
-	in.push( ifile );
 
 	/////////////////////////////////////////////////////////////////////////////
 	io::filtering_ostream out;
@@ -185,12 +195,15 @@ int main( int argc, char** argv )
 	}
 
 	ofstream ofile( ofilename.c_str(), ios_base::out | ios_base::trunc | ios_base::binary );
-	if( !ofile.is_open() )
+	if( ofilename!="-" )
 	{
-		cerr << "ERROR: Cannot open file [" << ofilename << "] for writing" << endl;
-		exit( 10 );
+		if( !ofile.is_open() )
+		{
+			cerr << "ERROR: Cannot open file [" << ofilename << "] for writing" << endl;
+			exit( 10 );
+		}
+		out.push( ofile );
 	}
-	out.push( ofile );
 
 	//set up signalig
 	signal( SIGINT, forceStop );
@@ -212,137 +225,24 @@ int main( int argc, char** argv )
         	{
                 MRTMessagePtr msg=MRTCommonHeader::newMessage( in );
 
-                switch( msg->getType() )
+                switch( determineMRTType(msg) )
                 {
-                case MRT_INVALID:
-                    //will copy invalid MRT as is
-                    break;
-                case BGP4MP:
-                	switch( msg->getSubType() )
-                	{
-                	case BGP4MP_STATE_CHANGE:
-                		//OK, will write these subtypes
+                case MRT_IPv4:
+                	if( ipv4 )
                 		break;
-                	case BGP4MP_MESSAGE:
-                	case BGP4MP_MESSAGE_AS4:
-                	{
-                		BGPMessagePtr bgp_message=
-                				dynamic_pointer_cast<MRTBgp4MPMessage>( msg )
-                				->getPayload( );
-
-                		switch( bgp_message->getType() )
-                		{
-                		case BGPCommonHeader::OPEN:
-                			//OK, will write these subtypes
-                			break;
-                		case BGPCommonHeader::UPDATE:
-                		{
-                			BGPUpdatePtr bgp_update=
-                					dynamic_pointer_cast<BGPUpdate>( bgp_message );
-
-                			const list<BGPAttributePtr> &attrs=bgp_update->getPathAttributes();
-
-                			bool isIPv6=false;
-
-                			BOOST_FOREACH( BGPAttributePtr attr, attrs )
-                			{
-                				if( attr->getAttributeTypeCode()==AttributeType::MP_REACH_NLRI )
-                				{
-                					isIPv6 |=
-                						(AFI_IPv6 ==
-										dynamic_pointer_cast<AttributeTypeMPReachNLRI>( attr->getAttributeValue() )
-												->getAFI( ));
-                				}
-                				else if( attr->getAttributeTypeCode()==AttributeType::MP_UNREACH_NLRI )
-                				{
-                					isIPv6 |=
-                						(AFI_IPv6 ==
-										dynamic_pointer_cast<AttributeTypeMPUnreachNLRI>( attr->getAttributeValue() )
-												->getAFI( ));
-                				}
-                			}
-
-                			if( !isIPv6 )
-                			{
-
-                        		///////////////////////////////////////////////////////////
-                        		continue; //Nope, will skip these subtypes
-                        		///////////////////////////////////////////////////////////
-
-                			}
-
-                			//OK, will write these
-
-                			if( bgp_update->getNlriLength()>0 )
-                			{
-                				LOG4CXX_ERROR(_log,
-                						"BGP_UPDATE carries IPv6 MP_REACH_NLRI and contains non-zero NLRI section"
-                						);
-                			}
-
-                			if( bgp_update->getWithdrawnRoutesLength()>0 )
-                			{
-                				LOG4CXX_ERROR(_log,
-                						"BGP_UPDATE carries IPv6 MP_UNREACH_NLRI and contains non-zero Withdrawn section"
-                						);
-                			}
-
-                			break;
-                		}
-                		case BGPCommonHeader::NOTIFICATION:
-                		case BGPCommonHeader::KEEPALIVE:
-                		case BGPCommonHeader::ROUTE_REFRESH:
-                			//OK, will write these subtypes
-                			break;
-                		}
-
-                		break;
-                	}
-                	case BGP4MP_STATE_CHANGE_AS4:
-                		//OK, will write these subtypes
-                		break;
-//                	case BGP4MP_MESSAGE_LOCAL:
-//                	case BGP4MP_MESSAGE_AS4_LOCAL:
-                	}
+                	else
+                		continue;
                 	break;
-                case TABLE_DUMP:
-                	switch( msg->getSubType() )
-                	{
-                	case AFI_IPv4:
 
-                		///////////////////////////////////////////////////////////
-                		continue; //Nope, will skip this subtype
-                		///////////////////////////////////////////////////////////
-
+                case MRT_IPv6:
+                	if( ipv6 )
                 		break;
-                	case AFI_IPv6:
-                		//OK, will write this subtypes
-                		break;
-                	}
+                	else
+                		continue;
                 	break;
-                case TABLE_DUMP_V2:
-                	switch( msg->getSubType() )
-                	{
-                	case PEER_INDEX_TABLE:
-                		//OK, will write this subtype
-                		break;
-                	case RIB_IPV4_UNICAST:
-                	case RIB_IPV4_MULTICAST:
 
-                		///////////////////////////////////////////////////////////
-                		continue; //Nope, will skip these subtypes
-                		///////////////////////////////////////////////////////////
-
-                		break;
-                	case RIB_IPV6_UNICAST:
-                	case RIB_IPV6_MULTICAST:
-                	case RIB_GENERIC:
-                		//OK, will write these subtypes
-                		break;
-                	}
-                	break;
-                default:
-                	// will write an MRT with unknown type without modification
+                case MRT_ANY:
+                case MRT_UNKNOWN:
                 	break;
                 }
 
