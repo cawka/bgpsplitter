@@ -28,14 +28,14 @@
 
 #include <bgpparser.h>
 
-#include <MRTCommonHeader.h>
-#include <MRTBgp4MPMessage.h>
-#include <BGPCommonHeader.h>
-#include <BGPUpdate.h>
-#include <BGPAttribute.h>
-#include <AttributeType.h>
-#include <AttributeTypeMPReachNLRI.h>
-#include <AttributeTypeMPUnreachNLRI.h>
+#include <parsers/MRTCommonHeader.h>
+#include <parsers/MRTBgp4MPMessage.h>
+#include <parsers/BGPCommonHeader.h>
+#include <parsers/BGPUpdate.h>
+#include <parsers/BGPAttribute.h>
+#include <parsers/AttributeType.h>
+#include <parsers/AttributeTypeMPReachNLRI.h>
+#include <parsers/AttributeTypeMPUnreachNLRI.h>
 #include <Exceptions.h>
 
 #include <iostream>

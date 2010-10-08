@@ -1,4 +1,5 @@
-git log > ChangeLog
-git log | sed -n -e 's/^Author: *//p' | uniq > AUTHORS
-autoreconf --install --force
+git log --format="%an <%ae>" |sort|uniq > AUTHORS
+python bootstrap/gitlog2changelog.py 
+
+autoreconf --install
 
