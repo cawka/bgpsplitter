@@ -35,8 +35,10 @@
 #include <fstream>
 #include <signal.h>
 
+#ifdef LOG4CXX
 #include <log4cxx/logger.h>
 using namespace log4cxx;
+#endif
 
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/option.hpp>
@@ -58,7 +60,10 @@ using namespace boost;
 
 #include "helper.h"
 
+#ifdef LOG4CXX
 static LoggerPtr _log=Logger::getLogger( "bgpsplitter" );
+#endif
+
 static volatile bool NeedStop=false;
 static volatile int RetCode=0;
 
@@ -75,7 +80,9 @@ int main( int argc, char** argv )
 	po::options_description opts( "General options" );
 	opts.add_options()
 		( "help,h",  "Print this help message" )
+#ifdef LOG4CXX
 		( "log,l",   po::value<string>(), "log4cxx configuration file" )
+#endif
 		( "input,i", po::value<string>(),
 				     "Input MRT file" )
 		( "output,o",  po::value<string>()	->default_value("-"),
@@ -170,6 +177,7 @@ int main( int argc, char** argv )
 	string iformat=
 			setStream( in, ifilename.c_str()/*, default_format.c_str()*/ );
 
+	bool useStdIn=false;
 	ifstream ifile( ifilename.c_str(), ios_base::in | ios_base::binary );
 	if( ifilename!="-" )
 	{
@@ -180,6 +188,8 @@ int main( int argc, char** argv )
 		}
 		in.push( ifile );
 	}
+	else
+		useStdIn=true;
 
 	/////////////////////////////////////////////////////////////////////////////
 	io::filtering_ostream out;
@@ -194,6 +204,7 @@ int main( int argc, char** argv )
 				<<"] formats are not the same" );
 	}
 
+	bool useStdOut=false;
 	ofstream ofile( ofilename.c_str(), ios_base::out | ios_base::trunc | ios_base::binary );
 	if( ofilename!="-" )
 	{
@@ -204,6 +215,8 @@ int main( int argc, char** argv )
 		}
 		out.push( ofile );
 	}
+	else
+		useStdOut=true;
 
 	//set up signalig
 	signal( SIGINT, forceStop );
@@ -303,16 +316,15 @@ int main( int argc, char** argv )
 
     io::close( out );
     io::close( in );
-    io::flush( out );
-    ofile.close( );
-    ifile.close( );
+    if( !useStdOut ) ofile.close( ); /* handle the case of stdout */
+    if( !useStdIn  ) ifile.close( ); /* handle the case of stdin  */
 
 	LOG4CXX_INFO( _log, count << " MRTs parsed" );
     if( count_error>0 )
     {
 	    LOG4CXX_INFO( _log, count_error << " MRTs skipped due to parsing error" );
     }
-	LOG4CXX_INFO( _log, count_output << " potentilly IPv6 related MRTs filtered" );
+	LOG4CXX_INFO( _log, count_output << " MRTs filtered" );
 
 	if( NeedStop )
 	{

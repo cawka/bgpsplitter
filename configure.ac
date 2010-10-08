@@ -10,11 +10,10 @@ AM_INIT_AUTOMAKE
 
 # Checks for programs.
 AC_PROG_CXX
+AC_PROG_LIBTOOL
 
 # Checks for libraries.
-PKG_CHECK_MODULES( log4cxx, [liblog4cxx] )
-AC_SUBST(log4cxx_CFLAGS)
-AC_SUBST(log4cxx_LIBS)
+AX_LOG4CXX
 
 PKG_CHECK_MODULES( bgpparser, [bgpparser] )
 AC_SUBST(bgpparser_CFLAGS)
@@ -28,6 +27,8 @@ AX_BOOST_REGEX
 AX_BOOST_IOSTREAMS
 
 AC_PATH_PROGS(PERL, perl)
+
+AX_DEBUG
 
 # Checks for header files.
 

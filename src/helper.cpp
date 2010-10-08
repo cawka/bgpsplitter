@@ -24,6 +24,7 @@ namespace io = boost::iostreams;
 #include <boost/filesystem.hpp>
 namespace fs = boost::filesystem;
 
+#ifdef LOG4CXX
 #include <log4cxx/logger.h>
 #include <log4cxx/consoleappender.h>
 #include <log4cxx/patternlayout.h>
@@ -35,13 +36,13 @@ namespace fs = boost::filesystem;
 using namespace log4cxx;
 using namespace log4cxx::helpers;
 
+static LoggerPtr _Logger=Logger::getLogger( "bgpsplitter" );
+#endif
+
 #include <boost/foreach.hpp>
 
 using namespace std;
 using namespace boost;
-
-static LoggerPtr _Logger=Logger::getLogger( "bgpsplitter" );
-
 
 static void setStream( io::filtering_stream<io::input> &stream, const string &format )
 {
@@ -136,6 +137,7 @@ template string setStream( io::filtering_stream<io::output> &stream,
  */
 void setLogging( const boost::program_options::variables_map &config )
 {
+#ifdef LOG4CXX
 	// configure Logger
 	if( config.count("log")>0 )
 		PropertyConfigurator::configure( config["log"].as<string>() );
@@ -147,8 +149,9 @@ void setLogging( const boost::program_options::variables_map &config )
 		ConsoleAppenderPtr appender ( new ConsoleAppender( layout ) );
 
 		BasicConfigurator::configure( appender );
-		Logger::getRootLogger()->setLevel( log4cxx::Level::getError() );
+		Logger::getRootLogger()->setLevel( log4cxx::Level::getOff() );
 	}
+#endif
 }
 
 /**
