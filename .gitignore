@@ -17,7 +17,6 @@ missing
 config.log
 config.status
 libtool
-INSTALL
 .DS_Store
 .autotools
 .cproject
