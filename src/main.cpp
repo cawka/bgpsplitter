@@ -223,7 +223,7 @@ int main( int argc, char** argv )
 	signal( SIGQUIT, forceStop );
 	signal( SIGTERM, forceStop );
 
-	LOG4CXX_INFO( _log, "Parsing input file [" << ifilename << "]" );
+	LOG4CXX_DEBUG( _log, "Parsing input file [" << ifilename << "]" );
 	unsigned long long count=0;
 	unsigned long long count_error=0;
 	unsigned long long count_output=0;
@@ -319,21 +319,17 @@ int main( int argc, char** argv )
     if( !useStdOut ) ofile.close( ); /* handle the case of stdout */
     if( !useStdIn  ) ifile.close( ); /* handle the case of stdin  */
 
-	LOG4CXX_INFO( _log, count << " MRTs parsed" );
-    if( count_error>0 )
-    {
-	    LOG4CXX_INFO( _log, count_error << " MRTs skipped due to parsing error" );
-    }
-	LOG4CXX_INFO( _log, count_output << " MRTs filtered" );
-
 	if( NeedStop )
 	{
 		LOG4CXX_INFO( _log, "Parsing was terminated, removing partially processed files" );
 		// @TODO remove any output file that was produced
 		std::remove( ofilename.c_str() );
 	}
+    else
+        LOG4CXX_INFO( _log, "Parsed / Skipped / Filtered: " 
+                << count << " / " << count_error << " / " << count_output );
 
-	LOG4CXX_INFO( _log, "Parsing ended" );
+	LOG4CXX_DEBUG( _log, "Parsing ended" );
 	return RetCode;
 }
 
