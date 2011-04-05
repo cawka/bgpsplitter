@@ -19,8 +19,6 @@
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/filter/bzip2.hpp>
 
-namespace io = boost::iostreams;
-
 #include <boost/filesystem.hpp>
 namespace fs = boost::filesystem;
 
@@ -43,41 +41,42 @@ static LoggerPtr _Logger=Logger::getLogger( "bgpsplitter" );
 
 using namespace std;
 using namespace boost;
+using namespace boost::iostreams;
 
-static void setStream( io::filtering_stream<io::input> &stream, const string &format )
+static void setStream( filtering_stream<input> &stream, const string &format )
 {
 	if( format=="gz" )
 	{
 		LOG4CXX_TRACE( _Logger, "Input file has GZIP format" );
-		stream.push( io::gzip_decompressor() );
+		stream.push( gzip_decompressor() );
 	}
 	else if( format=="bz2" )
 	{
 		LOG4CXX_TRACE( _Logger, "Input file has BZIP2 format" );
-		stream.push( io::bzip2_decompressor() );
+		stream.push( bzip2_decompressor() );
 	}
 }
 
-static void setStream( io::filtering_stream<io::output> &stream, const string &format )
+static void setStream( filtering_stream<output> &stream, const string &format )
 {
 	if( format=="gz" )
 	{
 		LOG4CXX_TRACE( _Logger, "Input file has GZIP format" );
-		stream.push( io::gzip_compressor(io::gzip::best_compression) );
+		stream.push( gzip_compressor(gzip::best_compression) );
 	}
 	else if( format=="bz2" )
 	{
 		LOG4CXX_TRACE( _Logger, "Input file has BZIP2 format" );
-		stream.push( io::bzip2_compressor() );
+		stream.push( bzip2_compressor() );
 	}
 }
 
-static void pushSTDIO( io::filtering_stream<io::input> &stream )
+static void pushSTDIO( filtering_stream<input> &stream )
 {
 	stream.push( cin );
 }
 
-static void pushSTDIO( io::filtering_stream<io::output> &stream )
+static void pushSTDIO( filtering_stream<output> &stream )
 {
 	stream.push( cout );
 }
@@ -94,7 +93,7 @@ static void pushSTDIO( io::filtering_stream<io::output> &stream )
  * 									file extension
  */
 template<class T>
-string setStream( io::filtering_stream<T> &stream,
+string setStream( filtering_stream<T> &stream,
 				  const char *filename,
 				  const char *default_format )
 {
@@ -120,11 +119,11 @@ string setStream( io::filtering_stream<T> &stream,
 	return format;
 }
 
-template string setStream( io::filtering_stream<io::input> &stream,
+template string setStream( filtering_stream<input> &stream,
 		  const char *filename,
 		  const char *default_format );
 
-template string setStream( io::filtering_stream<io::output> &stream,
+template string setStream( filtering_stream<output> &stream,
 		  const char *filename,
 		  const char *default_format );
 

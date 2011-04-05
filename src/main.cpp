@@ -50,13 +50,13 @@ namespace po = boost::program_options;
 #include <boost/iostreams/flush.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/filter/bzip2.hpp>
-namespace io = boost::iostreams;
 
 #include <boost/filesystem.hpp>
 namespace fs = boost::filesystem;
 
 using namespace std;
 using namespace boost;
+using namespace boost::iostreams;
 
 #include "helper.h"
 
@@ -172,7 +172,7 @@ int main( int argc, char** argv )
 	}
 
     //////////////////////////////////////////////////////////////////////////
-    io::filtering_istream in;
+    filtering_istream in;
 
 	string iformat=
 			setStream( in, ifilename.c_str()/*, default_format.c_str()*/ );
@@ -192,7 +192,7 @@ int main( int argc, char** argv )
 		useStdIn=true;
 
 	/////////////////////////////////////////////////////////////////////////////
-	io::filtering_ostream out;
+	filtering_ostream out;
 
 	string oformat=
 			setStream( out, ofilename.c_str()/*, default_format.c_str()*/ );
@@ -229,7 +229,7 @@ int main( int argc, char** argv )
 	unsigned long long count_output=0;
     try
     {
-        io::flush( out );
+        flush( out );
 
     	while( !NeedStop && in.peek()!=-1 )
     	{
@@ -260,9 +260,9 @@ int main( int argc, char** argv )
                 }
 
                 //case
-                io::write( out, reinterpret_cast<const char*>(&msg->getHeader()),
+                write( out, reinterpret_cast<const char*>(&msg->getHeader()),
                 				sizeof(msg->getHeader()) );
-                io::write( out, msg->getData().get(), msg->getLength() );
+                write( out, msg->getData().get(), msg->getLength() );
                 count_output++;
             }
             catch( MRTException e )
@@ -288,13 +288,13 @@ int main( int argc, char** argv )
         LOG4CXX_ERROR( _log, "ERROR (bgpparser): " << e.what() );
 		NeedStop=true;
     }
-	catch( io::gzip_error e )
+	catch( gzip_error e )
 	{
 		cerr << "ERROR (gzip): " << e.what() << endl;
         LOG4CXX_ERROR( _log, "ERROR (gzip): " << e.what() );
 		NeedStop=true;
 	}
-	catch( io::bzip2_error e )
+	catch( bzip2_error e )
 	{
 		cerr << "ERROR (bzip): " << e.what() << endl;
         LOG4CXX_ERROR( _log, "ERROR (bzip): code: " << e.error() << ", message: " << e.what() );
@@ -314,8 +314,8 @@ int main( int argc, char** argv )
         throw;
 	}
 
-    io::close( out );
-    io::close( in );
+    close( out );
+    close( in );
     if( !useStdOut ) ofile.close( ); /* handle the case of stdout */
     if( !useStdIn  ) ifile.close( ); /* handle the case of stdin  */
 
