@@ -93,6 +93,8 @@ int main( int argc, char** argv )
                      "Silently skip existing output file")
         ( "ipv6",    "Output IPv6-related MRT records (default)")
         ( "ipv4",    "Output IPv4-related MRT records")
+		( "meta",	 po::value<string>(),
+					 "Output file with meta information (number of records parsed, filtered, etc.)" )
 	;
 
 	po::positional_options_description p;
@@ -237,6 +239,8 @@ int main( int argc, char** argv )
            	try
         	{
                 MRTMessagePtr msg=MRTCommonHeader::newMessage( in );
+				
+				if( msg->getType()==MRT_INVALID ) count_error++;
 
                 switch( determineMRTType(msg) )
                 {
@@ -270,24 +274,8 @@ int main( int argc, char** argv )
                 LOG4CXX_ERROR( _log, e.what() );
                 count_error++;
             }
-            catch( BGPTextError e )
-            {
-                LOG4CXX_ERROR( _log, e.what() );
-                count_error++;
-            }
-            catch( BGPError e )
-            {
-                //information should be already logged, if the logger for bgpparser is enabled
-                count_error++;
-            }
     	}
 	}
-    catch( BGPParserError e )
-    {
-		cerr << "ERROR (bgpparser): " << e.what() << endl;
-        LOG4CXX_ERROR( _log, "ERROR (bgpparser): " << e.what() );
-		NeedStop=true;
-    }
 	catch( gzip_error e )
 	{
 		cerr << "ERROR (gzip): " << e.what() << endl;
@@ -326,8 +314,27 @@ int main( int argc, char** argv )
 		std::remove( ofilename.c_str() );
 	}
     else
+	{
         LOG4CXX_INFO( _log, "Parsed / Skipped / Filtered: " 
                 << count << " / " << count_error << " / " << count_output );
+
+		if( CONFIG.count("meta")>0 )
+		{
+			string meta=CONFIG["meta"].as<string>( );
+			if( fs::exists(meta) ) LOG4CXX_INFO( _log, "Rewritting existing meta file " << meta );
+
+			ofstream ometa( meta.c_str(), ios_base::out | ios_base::trunc | ios_base::binary );
+			if( !ometa.is_open() )
+			{
+				cerr << "ERROR: Cannot open meta file [" << ofilename << "] for writing" << endl;
+				exit( 10 );
+			}
+
+			ometa << "NUMBER OF ORIGINAL RECORDS: " << count << endl
+				  << "PARSED WITH ERRORS: " << count_error << endl
+				  << "FILTERED: " << count_output << endl << endl;
+		}
+	}
 
 	LOG4CXX_DEBUG( _log, "Parsing ended" );
 	return RetCode;
