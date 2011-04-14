@@ -94,19 +94,24 @@ static void pushSTDIO( filtering_stream<output> &stream )
  */
 template<class T>
 string setStream( filtering_stream<T> &stream,
-				  const char *filename,
-				  const char *default_format )
+				  const string &filename,
+				  const string &default_format )
 {
 	string format=default_format;
 
+	LOG4CXX_TRACE( _Logger, "trying regex ["<< "^.*\\.(gz|bz2)$" << "] on [" << filename << "]" );
+
 	smatch m;
-	if( default_format=="" &&
-		regex_match(string(filename), m, regex("^.*\\.(gz|bz2)$",regex_constants::icase)) )
+	if( //default_format=="" &&
+		regex_match(filename, m, regex(".*\\.(gz|bz2)",regex_constants::icase)) )
 	{
+		LOG4CXX_TRACE( _Logger, "regex ["<< "^.*\\.(gz|bz2)$" << "] match" );
 		format=m[1];
 	}
 
-	if( string(format)!="" && string(default_format)!="" && string(format)!=string(default_format) )
+	LOG4CXX_TRACE( _Logger, "Selected format [" << format << "] for " << filename << ", Default format [" << default_format << "]" );
+
+	if( string(format)!="" && default_format!="" && format!=default_format )
 	{
 		LOG4CXX_WARN( _Logger, "Default format is specified [" << default_format
 				<< "], but guessed format is ["<<format<<"]" );
@@ -120,12 +125,12 @@ string setStream( filtering_stream<T> &stream,
 }
 
 template string setStream( filtering_stream<input> &stream,
-		  const char *filename,
-		  const char *default_format );
+				  const string &filename,
+				  const string &default_format );
 
 template string setStream( filtering_stream<output> &stream,
-		  const char *filename,
-		  const char *default_format );
+				  const string &filename,
+				  const string &default_format );
 
 
 /**

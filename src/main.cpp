@@ -177,7 +177,7 @@ int main( int argc, char** argv )
     filtering_istream in;
 
 	string iformat=
-			setStream( in, ifilename.c_str()/*, default_format.c_str()*/ );
+			setStream( in, ifilename/*, default_format.c_str()*/ );
 
 	bool useStdIn=false;
 	ifstream ifile( ifilename.c_str(), ios_base::in | ios_base::binary );
@@ -197,7 +197,7 @@ int main( int argc, char** argv )
 	filtering_ostream out;
 
 	string oformat=
-			setStream( out, ofilename.c_str()/*, default_format.c_str()*/ );
+			setStream( out, ofilename/*, default_format.c_str()*/ );
 
 	if( iformat!=oformat )
 	{
@@ -233,12 +233,14 @@ int main( int argc, char** argv )
     {
         flush( out );
 
+		MRTTblDumpV2PeerIndexTblPtr tbldumpv2_indextbl;
+
     	while( !NeedStop && in.peek()!=-1 )
     	{
     		count++;
            	try
         	{
-                MRTMessagePtr msg=MRTCommonHeader::newMessage( in );
+                MRTMessagePtr msg=MRTCommonHeader::newMessage( in, tbldumpv2_indextbl );
 				
 				if( msg->getType()==MRT_INVALID ) count_error++;
 

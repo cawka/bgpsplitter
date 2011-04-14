@@ -15,7 +15,7 @@ AC_PROG_LIBTOOL
 # Checks for libraries.
 AX_LOG4CXX
 
-PKG_CHECK_MODULES( bgpparser, [bgpparser] )
+PKG_CHECK_MODULES( bgpparser, [bgpparser >= 0.2.1] )
 AC_SUBST(bgpparser_CFLAGS)
 AC_SUBST(bgpparser_LIBS)
 
@@ -26,7 +26,7 @@ AX_BOOST_PROGRAM_OPTIONS
 AX_BOOST_REGEX
 AX_BOOST_IOSTREAMS
 
-AC_PATH_PROGS(PERL, perl)
+# AC_PATH_PROGS(PERL, perl)
 
 AX_DEBUG
 

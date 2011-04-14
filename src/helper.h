@@ -18,8 +18,8 @@
  */
 template<class T>
 std::string setStream(  boost::iostreams::filtering_stream<T> &stream,
-						const char *filename,
-				   	    const char *default_format="" );
+						const std::string &filename,
+				   	    const std::string &default_format="" );
 
 
 /**
